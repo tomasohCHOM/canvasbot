@@ -1,6 +1,6 @@
 import os
-# IMPORT DISCORD
-# IMPORT DISCORD.EXT COMMANDS
+import discord
+from discord.ext import commands
 import asyncio
 from canvasapi import Canvas
 from dotenv import load_dotenv
@@ -17,9 +17,12 @@ CANVAS_API_URL = "https://csufullerton.instructure.com/"
 
 canvas = Canvas(CANVAS_API_URL, CANVAS_TOKEN)
 
-# INTENTS DEAFULT
+intents = discord.Intents.default()
+intents.message_content = True
 
-# COMMANDS.BOT command_prefix, intents, help_command
+bot = commands.Bot(command_prefix="^", intents=intents, help_command=None)
+
+counter = 1
 
 
 # Embed generator to format embed message outpt
@@ -71,8 +74,18 @@ async def canvas_courses(interaction: discord.Interaction):
 @bot.tree.command(
     name="canvas-assignments", description="Get Canvas assignments for a course."
 )
-async def canvas_assignments():
-    pass
+async def canvas_assignments(interaction: discord.Interaction, course_id: int):
+    try:
+        assignments = get_canvas_assignments(course_id)
+        await interaction.response.send_message(
+            embed=createMessageEmbed(
+                title="Canvas Assignments", description=assignments
+            ),
+            ephemeral=True,
+        )
+    except Exception as e:
+        await interaction.response.send_message(f"Error: str({e})", ephemeral=True)
+
 
 # Set up bot statup event
 @bot.event
@@ -85,6 +98,7 @@ async def on_ready():
     except Exception as e:
         print(f"Failed to sync commands: {e}")
 
+
 async def main() -> None:
     # Run other async tasks
     # USE ASYNC TASK GROUPS TO DO MULTIPLE TASKS AT A SINGLE TIME FOR EASY PARALLEL PROCESSING
@@ -95,7 +109,8 @@ async def main() -> None:
         async with bot:
             await bot.start(BOT_TOKEN)
     except:
-        print('Invalid Token')
+        print("Invalid Token")
         exit(1)
+
 
 asyncio.run(main())
