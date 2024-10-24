@@ -1,6 +1,7 @@
 import os
-import discord
-from discord.ext import commands
+# IMPORT DISCORD
+# IMPORT DISCORD.EXT COMMANDS
+import asyncio
 from canvasapi import Canvas
 from dotenv import load_dotenv
 
@@ -9,13 +10,16 @@ load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CANVAS_TOKEN = os.getenv("CANVAS_TOKEN")
 
+assert BOT_TOKEN is not None
+assert CANVAS_TOKEN is not None
 
-intents = discord.Intents.default()
-intents.message_content = True
+CANVAS_API_URL = "https://csufullerton.instructure.com/"
 
-bot = commands.Bot(command_prefix="^", intents=intents, help_command=None)
+canvas = Canvas(CANVAS_API_URL, CANVAS_TOKEN)
 
-CANVAS_API_URL = "https://canvas.instructure.com"
+# INTENTS DEAFULT
+
+# COMMANDS.BOT command_prefix, intents, help_command
 
 
 # Embed generator to format embed message outpt
@@ -28,7 +32,7 @@ def createMessageEmbed(title: str, description: str):
 
 # Function to get all Canvas courses associated with this user
 def get_canvas_courses():
-    canvas = Canvas(CANVAS_API_URL, CANVAS_TOKEN)
+    global canvas
     user = canvas.get_current_user()
     course_list = []
     for course in user.get_courses(enrollment_state="active"):
@@ -38,7 +42,7 @@ def get_canvas_courses():
 
 # Function to get all Canvas assignments given the course_id
 def get_canvas_assignments(course_id):
-    canvas = Canvas(CANVAS_API_URL, CANVAS_TOKEN)
+    global canvas
     course = canvas.get_course(course_id)
     assignments = []
     for assignment in course.get_assignments():
@@ -57,6 +61,7 @@ async def canvas_courses(interaction: discord.Interaction):
             embed=createMessageEmbed(
                 title="Available Canvas Courses", description=courses
             ),
+            ephemeral=True,
         )
     except Exception as e:
         await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
@@ -66,17 +71,8 @@ async def canvas_courses(interaction: discord.Interaction):
 @bot.tree.command(
     name="canvas-assignments", description="Get Canvas assignments for a course."
 )
-async def canvas_assignments(interaction: discord.Interaction, course_id: int):
-    try:
-        assignments = get_canvas_assignments(course_id)
-        await interaction.response.send_message(
-            embed=createMessageEmbed(
-                title="Canvas Assignments", description=assignments
-            )
-        )
-    except Exception as e:
-        await interaction.response.send_message(f"Error: str({e})", ephemeral=True)
-
+async def canvas_assignments():
+    pass
 
 # Set up bot statup event
 @bot.event
@@ -84,14 +80,22 @@ async def on_ready():
     print(f"Logged in as {bot.user}")
     try:
         # Sync the command tree to ensure slash commands are registered
-        await bot.tree.sync()
-        print("Slash commands synced.")
+        commandtree = await bot.tree.sync()
+        print(f"Synced {len(commandtree)} application command(s)")
     except Exception as e:
         print(f"Failed to sync commands: {e}")
 
+async def main() -> None:
+    # Run other async tasks
+    # USE ASYNC TASK GROUPS TO DO MULTIPLE TASKS AT A SINGLE TIME FOR EASY PARALLEL PROCESSING
+    # https://docs.python.org/3/library/asyncio-task.html#task-groups
 
-if __name__ == "__main__":
-    if not BOT_TOKEN:
-        print("No Token Found")
+    # Start the bot
+    try:
+        async with bot:
+            await bot.start(BOT_TOKEN)
+    except:
+        print('Invalid Token')
         exit(1)
-    bot.run(BOT_TOKEN)
+
+asyncio.run(main())
