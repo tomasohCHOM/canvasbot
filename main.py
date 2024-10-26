@@ -1,4 +1,5 @@
 import os
+import logging
 import discord
 from discord.ext import commands
 import asyncio
@@ -22,10 +23,8 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="^", intents=intents, help_command=None)
 
-counter = 1
 
-
-# Embed generator to format embed message outpt
+# Embed generator to format embed message output
 def createMessageEmbed(title: str, description: str):
     embed = discord.Embed(
         title=title, description=description, color=discord.Color.blue()
@@ -33,7 +32,7 @@ def createMessageEmbed(title: str, description: str):
     return embed
 
 
-# Function to get all Canvas courses associated with this user
+# Get all Canvas courses associated with this user
 def get_canvas_courses():
     global canvas
     user = canvas.get_current_user()
@@ -43,7 +42,7 @@ def get_canvas_courses():
     return "\n".join(course_list)
 
 
-# Function to get all Canvas assignments given the course_id
+# Get all Canvas assignments given the course_id
 def get_canvas_assignments(course_id):
     global canvas
     course = canvas.get_course(course_id)
@@ -101,15 +100,20 @@ async def on_ready():
 
 async def main() -> None:
     # Run other async tasks
-    # USE ASYNC TASK GROUPS TO DO MULTIPLE TASKS AT A SINGLE TIME FOR EASY PARALLEL PROCESSING
+    # Use async task groups to do multiple tasks at a single time for easy parallel processing
     # https://docs.python.org/3/library/asyncio-task.html#task-groups
+
+    # Ensure the bot token is present
+    if not BOT_TOKEN:
+        logging.error("No token found")
+        exit(1)
 
     # Start the bot
     try:
         async with bot:
             await bot.start(BOT_TOKEN)
     except:
-        print("Invalid Token")
+        logging.error("Invalid Token")
         exit(1)
 
 
