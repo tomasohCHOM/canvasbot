@@ -1,6 +1,7 @@
 import os
-# IMPORT DISCORD
-# IMPORT DISCORD.EXT COMMANDS
+import logging
+import discord
+from discord.ext import commands
 import asyncio
 from canvasapi import Canvas
 from dotenv import load_dotenv
@@ -17,12 +18,13 @@ CANVAS_API_URL = "https://csufullerton.instructure.com/"
 
 canvas = Canvas(CANVAS_API_URL, CANVAS_TOKEN)
 
-# INTENTS DEAFULT
+intents = discord.Intents.default()
+intents.message_content = True
 
-# COMMANDS.BOT command_prefix, intents, help_command
+bot = commands.Bot(command_prefix="^", intents=intents, help_command=None)
 
 
-# Embed generator to format embed message outpt
+# Embed generator to format embed message output
 def createMessageEmbed(title: str, description: str):
     embed = discord.Embed(
         title=title, description=description, color=discord.Color.blue()
@@ -30,7 +32,7 @@ def createMessageEmbed(title: str, description: str):
     return embed
 
 
-# Function to get all Canvas courses associated with this user
+# Get all Canvas courses associated with this user
 def get_canvas_courses():
     global canvas
     user = canvas.get_current_user()
@@ -40,7 +42,7 @@ def get_canvas_courses():
     return "\n".join(course_list)
 
 
-# Function to get all Canvas assignments given the course_id
+# Get all Canvas assignments given the course_id
 def get_canvas_assignments(course_id):
     global canvas
     course = canvas.get_course(course_id)
@@ -71,8 +73,18 @@ async def canvas_courses(interaction: discord.Interaction):
 @bot.tree.command(
     name="canvas-assignments", description="Get Canvas assignments for a course."
 )
-async def canvas_assignments():
-    pass
+async def canvas_assignments(interaction: discord.Interaction, course_id: int):
+    try:
+        assignments = get_canvas_assignments(course_id)
+        await interaction.response.send_message(
+            embed=createMessageEmbed(
+                title="Canvas Assignments", description=assignments
+            ),
+            ephemeral=True,
+        )
+    except Exception as e:
+        await interaction.response.send_message(f"Error: str({e})", ephemeral=True)
+
 
 # Set up bot statup event
 @bot.event
@@ -85,17 +97,24 @@ async def on_ready():
     except Exception as e:
         print(f"Failed to sync commands: {e}")
 
+
 async def main() -> None:
     # Run other async tasks
-    # USE ASYNC TASK GROUPS TO DO MULTIPLE TASKS AT A SINGLE TIME FOR EASY PARALLEL PROCESSING
+    # Use async task groups to do multiple tasks at a single time for easy parallel processing
     # https://docs.python.org/3/library/asyncio-task.html#task-groups
+
+    # Ensure the bot token is present
+    if not BOT_TOKEN:
+        logging.error("No token found")
+        exit(1)
 
     # Start the bot
     try:
         async with bot:
             await bot.start(BOT_TOKEN)
     except:
-        print('Invalid Token')
+        logging.error("Invalid Token")
         exit(1)
+
 
 asyncio.run(main())
